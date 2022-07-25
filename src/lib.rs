@@ -1,38 +1,52 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::near_bindgen;
+use near_sdk::{near_bindgen, AccountId, Balance, BorshStorageKey, env, PanicOnDefault};
+use near_sdk::collections::{UnorderedMap, LookupSet};
+
 
 #[near_bindgen]
-#[derive(Default, BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
-    // SETUP CONTRACT STATE
+    owner_id: AccountId,
+    accounts: UnorderedMap<AccountId, Balance>,
+    whitelisted_tokens: LookupSet<AccountId>
+}
+
+#[derive(BorshSerialize, BorshStorageKey)]
+enum StorageKey {
+    NewAccounts,
+    Tokens
 }
 
 #[near_bindgen]
 impl Contract {
-    // ADD CONTRACT METHODS HERE
-}
+    #[init]
+    pub fn new(owner_id: AccountId) -> Self {
+        Self { 
+            owner_id, 
+            accounts: UnorderedMap::new(StorageKey::NewAccounts),
+            whitelisted_tokens: LookupSet::new(StorageKey::Tokens)
+        }
+    }
+    pub fn get_accounts(&self) -> Vec<AccountId> {
+        self.assert_owner();
+        let mut result:Vec<AccountId> = Vec::new();
+        for (account, _balance) in self.accounts.iter() {
+            result.push(account);
+        }
+        result
+    }
+    #[payable]
+    pub fn deposit(&mut self) {
+        // deposit-account retrieve
+        let deposit = env::attached_deposit();
+        let account_id = env::predecessor_account_id();
 
-/*
- * the rest of this file sets up unit tests
- * to run these, the command will be:
- * cargo test --package rust-template -- --nocapture
- * Note: 'rust-template' comes from Cargo.toml's 'name' key
- */
+        assert!(deposit > 0, "ERR_NEGATIVE_DEPOSIT");
 
-// use the attribute below for unit tests
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use near_sdk::test_utils::{get_logs, VMContextBuilder};
-    use near_sdk::{testing_env, AccountId};
-
-    // part of writing unit tests is setting up a mock context
-    // provide a `predecessor` here, it'll modify the default context
-    fn get_context(predecessor: AccountId) -> VMContextBuilder {
-        let mut builder = VMContextBuilder::new();
-        builder.predecessor_account_id(predecessor);
-        builder
+        self.accounts.insert(&account_id, &deposit);
     }
 
-    // TESTS HERE
+    fn assert_owner(&self) {
+        assert!(self.owner_id.clone() == env::predecessor_account_id(), "ERR_NOT_ALLOWED")
+    }
 }
