@@ -16,6 +16,12 @@ To get started with this template:
 8. Build the contract
 
     `RUSTFLAGS='-C link-arg=-s' cargo build --target wasm32-unknown-unknown --release`
+    
+9. Deploy!
+    #### dev-deploy
+    `near dev-deploy -f --wasmFile target/wasm32-unknown-unknown/release/rust_template.wasm
+    #### for some testnet account
+    `near deploy -f --wasmFile target/wasm32-unknown-unknown/release/coinsender.wasm --accountId account.testnet`
 
 **Get more info at:**
 
